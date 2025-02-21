@@ -2,16 +2,25 @@ import asyncio
 import asyncpg
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Application, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+import logging
+
+# Налаштування логування
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # 📌 Дані для підключення до PostgreSQL
 DB_URL = "postgresql://neondb_owner:npg_dhwrDX6O1keB@ep-round-star-a9r38wl3-pooler.gwc.azure.neon.tech/neondb"
 
 # 📌 Функція підключення до БД та отримання даних
 async def fetch_data(query):
-    conn = await asyncpg.connect(DB_URL)
-    rows = await conn.fetch(query)
-    await conn.close()
-    return rows
+    try:
+        conn = await asyncpg.connect(DB_URL)
+        rows = await conn.fetch(query)
+        await conn.close()
+        return rows
+    except Exception as e:
+        logger.error(f"Помилка підключення до БД: {e}")
+        return []
 
 # 📌 Головне меню
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -26,7 +35,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
 async def info(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     keyboard = [[InlineKeyboardButton("📋 Марки кондиціонерів", callback_data='brands')],
                 [InlineKeyboardButton("❄️ Типи фреонів", callback_data='freon')]]
-#                [InlineKeyboardButton("🔙 Назад", callback_data='back')]]
 
     reply_markup = InlineKeyboardMarkup(keyboard)
     await update.message.reply_text("ℹ️ Інформація:", reply_markup=reply_markup)
@@ -72,13 +80,13 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
 # 📌 Головна функція
 def main():
-    app = Application.builder().token("8177185933:AAGvnm0JmuTxucr8VqU0nzGd4WrNkn5VHpU").build()
+    app = Application.builder().token("YOUR_TELEGRAM_BOT_TOKEN").build()
 
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CallbackQueryHandler(button_callback))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
 
-    print("✅ Бот запущено...")
+    logger.info("✅ Бот запущено...")
     app.run_polling()
 
 if __name__ == '__main__':
