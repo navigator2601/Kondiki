@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 
 # Дані для підключення до PostgreSQL
-DB_URL = "postgresql://neondb_owner:npg_dhwrDX6O1keB@ep-round-star-a9r38wl3-pooler.gwc.azure.neon.tech/neondb"
+DB_URL = "postgresql://neondb_owner:npg_dhwrDX6O1keB@ep-round-star-a9r38wl3-pooler.gwc.azure.neon.tech/neondb?sslmode=require"
 
 # Функція підключення до БД та отримання даних
 async def fetch_data(query):
@@ -48,7 +48,7 @@ def info(update: Update, context: CallbackContext) -> None:
 # Отримання списку марок кондиціонерів
 async def get_brands(update: Update, context: CallbackContext) -> None:
     brands = await fetch_data("SELECT name FROM cond_brand")
-    brands_list = "\n".join([f"✅ {b['name']}" for b in brands]) if brands else "❌ Дані відсутні."
+    brands_list = "\n".join([f"✅ {b['name']}"] for b in brands) if brands else "❌ Дані відсутні."
     update.callback_query.message.reply_text(f"📋 **Марки кондиціонерів:**\n{brands_list}", parse_mode="Markdown")
 
 # Отримання типів фреонів
