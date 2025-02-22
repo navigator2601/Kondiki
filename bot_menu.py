@@ -2,6 +2,7 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKe
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, Filters, CallbackContext
 import logging
 import os
+import psycopg2
 from flask import Flask, request
 
 # Налаштування логування
@@ -11,6 +12,13 @@ logger = logging.getLogger(__name__)
 
 # Створення Flask додатку
 app = Flask(__name__)
+
+# Підключення до бази даних Neon.tech
+def connect_db():
+    conn = psycopg2.connect(
+        dsn="postgresql://neondb_owner:npg_dhwrDX6O1keB@ep-round-star-a9r38wl3-pooler.gwc.azure.neon.tech/neondb"
+    )
+    return conn
 
 # Головне меню
 def start(update: Update, context: CallbackContext) -> None:
@@ -23,18 +31,26 @@ def start(update: Update, context: CallbackContext) -> None:
 # Меню "ℹ️ Інформація"
 def info(update: Update, context: CallbackContext) -> None:
     keyboard = [[InlineKeyboardButton("📋 Марки кондиціонерів", callback_data='brands')],
-                [InlineKeyboardButton("❄️ Типи фреонів", callback_data='freon')]]
+                [InlineKeyboardButton("❄️ Фреони", callback_data='freons')]]
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text("ℹ️ Інформація:", reply_markup=reply_markup)
 
-# Отримання списку марок кондиціонерів (без запиту до БД)
+# Отримання списку марок кондиціонерів з бази даних
 def get_brands(update: Update, context: CallbackContext) -> None:
-    brands_list = "\n".join(["✅ Brand1", "✅ Brand2", "✅ Brand3"])
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("SELECT name FROM cond_brand")
+    brands_list = "\n".join([f"✅ {row[0]}" for row in cur.fetchall()])
+    conn.close()
     update.callback_query.message.reply_text(f"📋 **Марки кондиціонерів:**\n{brands_list}", parse_mode="Markdown")
 
-# Отримання типів фреонів (без запиту до БД)
-def get_freon(update: Update, context: CallbackContext) -> None:
-    freon_list = "\n".join(["❄️ Freon1 – Chemical1", "❄️ Freon2 – Chemical2", "❄️ Freon3 – Chemical3"])
+# Отримання типів фреонів з бази даних
+def get_freons(update: Update, context: CallbackContext) -> None:
+    conn = connect_db()
+    cur = conn.cursor()
+    cur.execute("SELECT name, chemical_name FROM freons")
+    freon_list = "\n".join([f"❄️ {row[0]} – {row[1]}" for row in cur.fetchall()])
+    conn.close()
     update.callback_query.message.reply_text(f"❄️ **Типи фреонів:**\n{freon_list}", parse_mode="Markdown")
 
 # Обробка натискання кнопок
@@ -44,8 +60,8 @@ def button_callback(update: Update, context: CallbackContext) -> None:
 
     if query.data == 'brands':
         get_brands(update, context)
-    elif query.data == 'freon':
-        get_freon(update, context)
+    elif query.data == 'freons':
+        get_freons(update, context)
     elif query.data == 'back':
         start(update, context)
 
@@ -66,7 +82,7 @@ def message_handler(update: Update, context: CallbackContext) -> None:
 
 # Головна функція
 def main():
-    updater = Updater(token=os.getenv("TELEGRAM_BOT_TOKEN"), use_context=True)
+    updater = Updater(token="8177185933:AAGvnm0JmuTxucr8VqU0nzGd4WrNkn5VHpU", use_context=True)
 
     dispatcher = updater.dispatcher
 
