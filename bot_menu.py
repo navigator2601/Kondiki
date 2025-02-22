@@ -1,5 +1,3 @@
-import asyncio
-import asyncpg
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, Filters, CallbackContext
 import logging
@@ -7,28 +5,12 @@ import os
 from flask import Flask, request
 
 # Налаштування логування
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levellevelname)s - %(message)s',
                     handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
 
 # Створення Flask додатку
 app = Flask(__name__)
-
-# Дані для підключення до PostgreSQL
-DB_URL = "postgresql://neondb_owner:npg_dhwrDX6O1keB@ep-round-star-a9r38wl3-pooler.gwc.azure.neon.tech/neondb?sslmode=require"
-
-# Функція підключення до БД та отримання даних
-async def fetch_data(query):
-    try:
-        logger.info("Attempting to connect to the database...")
-        conn = await asyncpg.connect(DB_URL)
-        logger.info("Successfully connected to the database.")
-        rows = await conn.fetch(query)
-        await conn.close()
-        return rows
-    except Exception as e:
-        logger.error(f"Помилка підключення до БД: {e}")
-        return []
 
 # Головне меню
 def start(update: Update, context: CallbackContext) -> None:
@@ -45,16 +27,14 @@ def info(update: Update, context: CallbackContext) -> None:
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text("ℹ️ Інформація:", reply_markup=reply_markup)
 
-# Отримання списку марок кондиціонерів
-async def get_brands(update: Update, context: CallbackContext) -> None:
-    brands = await fetch_data("SELECT name FROM cond_brand")
-    brands_list = "\n".join([f"✅ {b['name']}"] for b in brands) if brands else "❌ Дані відсутні."
+# Отримання списку марок кондиціонерів (без запиту до БД)
+def get_brands(update: Update, context: CallbackContext) -> None:
+    brands_list = "\n".join(["✅ Brand1", "✅ Brand2", "✅ Brand3"])
     update.callback_query.message.reply_text(f"📋 **Марки кондиціонерів:**\n{brands_list}", parse_mode="Markdown")
 
-# Отримання типів фреонів
-async def get_freon(update: Update, context: CallbackContext) -> None:
-    freons = await fetch_data("SELECT name, chemical_name FROM freons")
-    freon_list = "\n".join([f"❄️ {f['name']} – {f['chemical_name']}"] for f in freons) if freons else "❌ Дані відсутні."
+# Отримання типів фреонів (без запиту до БД)
+def get_freon(update: Update, context: CallbackContext) -> None:
+    freon_list = "\n".join(["❄️ Freon1 – Chemical1", "❄️ Freon2 – Chemical2", "❄️ Freon3 – Chemical3"])
     update.callback_query.message.reply_text(f"❄️ **Типи фреонів:**\n{freon_list}", parse_mode="Markdown")
 
 # Обробка натискання кнопок
@@ -63,9 +43,9 @@ def button_callback(update: Update, context: CallbackContext) -> None:
     query.answer()
 
     if query.data == 'brands':
-        asyncio.run(get_brands(update, context))
+        get_brands(update, context)
     elif query.data == 'freon':
-        asyncio.run(get_freon(update, context))
+        get_freon(update, context)
     elif query.data == 'back':
         start(update, context)
 
