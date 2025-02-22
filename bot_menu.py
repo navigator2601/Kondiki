@@ -7,12 +7,8 @@ import os
 from flask import Flask, request
 
 # Налаштування логування
-logging.basicConfig(level=logging.INFO,
-                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-                    handlers=[
-                        logging.FileHandler("debug.log"),
-                        logging.StreamHandler()
-                    ])
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[logging.FileHandler("debug.log"), logging.StreamHandler()])
 logger = logging.getLogger(__name__)
 
 # Створення Flask додатку
@@ -24,7 +20,9 @@ DB_URL = "postgresql://neondb_owner:npg_dhwrDX6O1keB@ep-round-star-a9r38wl3-pool
 # Функція підключення до БД та отримання даних
 async def fetch_data(query):
     try:
+        logger.info("Attempting to connect to the database...")
         conn = await asyncpg.connect(DB_URL)
+        logger.info("Successfully connected to the database.")
         rows = await conn.fetch(query)
         await conn.close()
         return rows
@@ -88,7 +86,7 @@ def message_handler(update: Update, context: CallbackContext) -> None:
 
 # Головна функція
 def main():
-    updater = Updater(token="8177185933:AAGvnm0JmuTxucr8VqU0nzGd4WrNkn5VHpU", use_context=True)
+    updater = Updater(token=os.getenv("TELEGRAM_BOT_TOKEN"), use_context=True)
 
     dispatcher = updater.dispatcher
 
@@ -113,4 +111,4 @@ def webhook():
 
 if __name__ == '__main__':
     main()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+    app.run(host='0.0.0.0', port=int(os.getenv('PORT', 8080)))
