@@ -4,19 +4,24 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKe
 from telegram.ext import Updater, CommandHandler, MessageHandler, CallbackQueryHandler, Filters, CallbackContext
 import logging
 import os
-from flask import Flask
+from flask import Flask, request
 
 # Налаштування логування
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.INFO,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+                    handlers=[
+                        logging.FileHandler("debug.log"),
+                        logging.StreamHandler()
+                    ])
 logger = logging.getLogger(__name__)
 
 # Створення Flask додатку
 app = Flask(__name__)
 
-# 📌 Дані для підключення до PostgreSQL
-DB_URL = os.getenv("DB_URL")
+# Дані для підключення до PostgreSQL
+DB_URL = "postgresql://neondb_owner:npg_dhwrDX6O1keB@ep-round-star-a9r38wl3-pooler.gwc.azure.neon.tech/neondb"
 
-# 📌 Функція підключення до БД та отримання даних
+# Функція підключення до БД та отримання даних
 async def fetch_data(query):
     try:
         conn = await asyncpg.connect(DB_URL)
@@ -27,36 +32,34 @@ async def fetch_data(query):
         logger.error(f"Помилка підключення до БД: {e}")
         return []
 
-# 📌 Головне меню
+# Головне меню
 def start(update: Update, context: CallbackContext) -> None:
     keyboard = [['ℹ️ Інформація', '⚙️ Налаштування'],
                 ['📞 Підтримка', '🔙 Назад'],
                 ['Просто велика кнопка']]
-    
     reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
     update.message.reply_text("Чіназес! Просто імбово що ти підключився. Будемо чілитися разом", reply_markup=reply_markup)
 
-# 📌 Меню "ℹ️ Інформація"
+# Меню "ℹ️ Інформація"
 def info(update: Update, context: CallbackContext) -> None:
     keyboard = [[InlineKeyboardButton("📋 Марки кондиціонерів", callback_data='brands')],
                 [InlineKeyboardButton("❄️ Типи фреонів", callback_data='freon')]]
-
     reply_markup = InlineKeyboardMarkup(keyboard)
     update.message.reply_text("ℹ️ Інформація:", reply_markup=reply_markup)
 
-# 📌 Отримання списку марок кондиціонерів
+# Отримання списку марок кондиціонерів
 async def get_brands(update: Update, context: CallbackContext) -> None:
-    brands = await fetch_data("SELECT name FROM cond_brand")  # Запит до таблиці
+    brands = await fetch_data("SELECT name FROM cond_brand")
     brands_list = "\n".join([f"✅ {b['name']}" for b in brands]) if brands else "❌ Дані відсутні."
     update.callback_query.message.reply_text(f"📋 **Марки кондиціонерів:**\n{brands_list}", parse_mode="Markdown")
 
-# 📌 Отримання типів фреонів
+# Отримання типів фреонів
 async def get_freon(update: Update, context: CallbackContext) -> None:
     freons = await fetch_data("SELECT name, chemical_name FROM freons")
     freon_list = "\n".join([f"❄️ {f['name']} – {f['chemical_name']}"] for f in freons) if freons else "❌ Дані відсутні."
     update.callback_query.message.reply_text(f"❄️ **Типи фреонів:**\n{freon_list}", parse_mode="Markdown")
 
-# 📌 Обробка натискання кнопок
+# Обробка натискання кнопок
 def button_callback(update: Update, context: CallbackContext) -> None:
     query = update.callback_query
     query.answer()
@@ -68,7 +71,7 @@ def button_callback(update: Update, context: CallbackContext) -> None:
     elif query.data == 'back':
         start(update, context)
 
-# 📌 Обробка повідомлень
+# Обробка повідомлень
 def message_handler(update: Update, context: CallbackContext) -> None:
     text = update.message.text
 
@@ -83,9 +86,9 @@ def message_handler(update: Update, context: CallbackContext) -> None:
     elif text == "Просто велика кнопка":
         update.message.reply_text("Якщо вона велика, то це не означає що її нада тицяти. Пон?")
 
-# 📌 Головна функція
+# Головна функція
 def main():
-    updater = Updater(token=os.getenv("TELEGRAM_BOT_TOKEN"), use_context=True)
+    updater = Updater(token="8177185933:AAGvnm0JmuTxucr8VqU0nzGd4WrNkn5VHpU", use_context=True)
 
     dispatcher = updater.dispatcher
 
@@ -100,6 +103,13 @@ def main():
 @app.route('/')
 def index():
     return "Telegram Bot is running."
+
+@app.route('/webhook', methods=['POST'])
+def webhook():
+    if request.method == 'POST':
+        update = Update.de_json(request.get_json(force=True), updater.bot)
+        dispatcher.process_update(update)
+        return 'ok', 200
 
 if __name__ == '__main__':
     main()
